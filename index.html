@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>N Queens Visualizer - All Solutions</title>
+
+    <style>
+        body{
+        font-family:Segoe UI;
+        margin:0;
+        background:linear-gradient(135deg,#0f172a,#1e293b);
+        color:white;
+        text-align:center;
+        }
+
+        header{
+        background:linear-gradient(90deg,#6366f1,#22c55e,#06b6d4);
+        padding:18px;
+        font-size:28px;
+        font-weight:bold;
+        }
+
+        .container{
+        display:flex;
+        gap:30px;
+        margin-top:20px;
+        align-items:flex-start;
+        }
+
+        .controls{
+        background:rgba(255,255,255,0.07);
+        padding:20px;
+        border-radius:10px;
+        width:250px;
+        }
+
+        .controls label{
+        display:block;
+        margin-top:15px;
+        font-weight:bold;
+        }
+
+        select{
+        width:100%;
+        padding:8px;
+        margin-top:5px;
+        border-radius:5px;
+        border:none;
+        }
+
+        button{
+        margin-top:10px;
+        padding:10px;
+        width:100%;
+        background:#22c55e;
+        border:none;
+        color:white;
+        font-size:15px;
+        border-radius:6px;
+        cursor:pointer;
+        }
+
+        button:hover{
+        background:#16a34a;
+        }
+
+        .stats{
+        display:flex;
+        gap:20px;
+        justify-content:center;
+        margin-bottom:15px;
+        }
+
+        .statBox{
+        background:rgba(255,255,255,0.08);
+        padding:10px 15px;
+        border-radius:10px;
+        min-width:100px;
+        }
+
+        .statBox span{
+        display:block;
+        font-size:22px;
+        font-weight:bold;
+        color:#22c55e;
+        }
+
+        #board{
+        display:grid;
+        justify-content:center;
+        position:relative;
+        }
+
+        .cell{
+        width:65px;
+        height:65px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        }
+
+        .white{background:#e2e8f0;}
+        .black{background:#64748b;}
+
+        .cell img{
+        width:45px;
+        }
+
+        .explanation{
+        width:350px;
+        background:rgba(255,255,255,0.05);
+        padding:20px;
+        border-radius:12px;
+        text-align:left;
+        max-height:500px;
+        overflow-y:auto;
+        font-size:14px;
+        }
+
+        .step{
+        margin-bottom:8px;
+        padding:6px;
+        border-radius:6px;
+        }
+
+        .try{border-left:4px solid orange;}
+        .safeStep{border-left:4px solid #22c55e;}
+        .wrong{border-left:4px solid red;}
+        .backtrack{border-left:4px solid #6366f1;}
+
+        .solutionBox{
+        border:1px solid #22c55e;
+        padding:10px;
+        border-radius:10px;
+        }
+
+        .solutionBoard{
+        display:grid;
+        }
+
+        .smallCell{
+        width:22px;
+        height:22px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:14px;
+        }
+
+        /* ---- Celebration Overlay ---- */
+        #celebrationOverlay{
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        background: rgba(0,0,0,0.85);
+        color:#22c55e;
+        font-size:36px;
+        font-weight:bold;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        z-index:10;
+        opacity:0;
+        pointer-events:none;
+        transition: opacity 0.5s ease;
+        text-shadow: 0 0 20px #22c55e;
+        flex-direction: column;
+        }
+
+        #celebrationOverlay.show{
+        opacity:1;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<header>N-Queens Interactive Visualizer (All Solutions)</header>
+
+<div class="container">
+
+    <div class="controls">
+
+        <label>Board Size</label>
+        <select id="size">
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option selected>8</option>
+        </select>
+
+        <label>Speed</label>
+        <select id="speed">
+            <option value="2000">Very Slow</option>
+            <option value="1200">Slow</option>
+            <option value="600" selected>Medium</option>
+            <option value="200">Fast</option>
+        </select>
+
+        <button onclick="start()">Start</button>
+        <button onclick="pauseAlgo()">Pause</button>
+        <button onclick="resumeAlgo()">Resume</button>
+        <button onclick="resetBoard()">Reset</button>
+
+    </div>
+
+    <div>
+
+        <div class="stats">
+            <div class="statBox">Steps<span id="stepCount">0</span></div>
+            <div class="statBox">Backtracks<span id="backtrackCount">0</span></div>
+            <div class="statBox">Queens<span id="queenCount">0</span></div>
+        </div>
+
+        <div id="board"></div>
+
+        <h3 style="margin-top:25px;">Solutions</h3>
+        <div id="solutions" style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;"></div>
+
+        <!-- Celebration Overlay -->
+        <div id="celebrationOverlay">
+            🎉 All Solutions Found! 🎉
+            <br>
+            <span id="totalSolutions"></span>
+        </div>
+
+    </div>
+
+    <div class="explanation">
+
+        <h3>Explanation</h3>
+
+        <p>
+            Goal: Place queens so they don't attack each other.
+        </p>
+
+        <div id="steps"></div>
+
+    </div>
+
+</div>
+
+<script>
+
+    let N
+    let board=[]
+    let delay=600
+    let paused=false
+
+    let steps=0
+    let backtracks=0
+    let queensPlaced=0
+
+    let solutions=[]
+
+    function sleep(ms){
+    return new Promise(res=>setTimeout(res,ms))
+    }
+
+    async function waitIfPaused(){
+    while(paused){
+    await sleep(200)
+    }
+    }
+
+    function addStep(text,type="try"){
+    steps++
+    document.getElementById("stepCount").innerText=steps
+    let div=document.createElement("div")
+    div.className="step "+type
+    div.innerHTML=text
+    document.getElementById("steps").prepend(div)
+    }
+
+    function drawBoard(){
+    const boardDiv=document.getElementById("board")
+    boardDiv.innerHTML=""
+    boardDiv.style.gridTemplateColumns=`repeat(${N},65px)`
+    for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+    const cell=document.createElement("div")
+    cell.classList.add("cell")
+    if((r+c)%2==0)
+    cell.classList.add("white")
+    else
+    cell.classList.add("black")
+    if(board[r]===c){
+    const img=document.createElement("img")
+    img.src="https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg"
+    cell.appendChild(img)
+    }
+    boardDiv.appendChild(cell)
+    }
+    }
+    }
+
+    function showSolutionBoard(sol){
+    let container=document.getElementById("solutions")
+    let box=document.createElement("div")
+    box.className="solutionBox"
+
+    let mini=document.createElement("div")
+    mini.className="solutionBoard"
+    mini.style.gridTemplateColumns=`repeat(${N},22px)`
+
+    for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+    let cell=document.createElement("div")
+    cell.className="smallCell"
+    if((r+c)%2==0)
+    cell.style.background="#e2e8f0"
+    else
+    cell.style.background="#64748b"
+    if(sol[r]-1===c){
+    cell.innerHTML="♛"
+    cell.style.color="black"
+    }
+    mini.appendChild(cell)
+    }
+    }
+
+    let numbers=document.createElement("div")
+    numbers.innerHTML="<b>"+sol.join(" ")+"</b>"
+    numbers.style.marginTop="5px"
+
+    box.appendChild(mini)
+    box.appendChild(numbers)
+    container.appendChild(box)
+    }
+
+    function isSafe(row,col){
+    for(let i=0;i<row;i++){
+    let q=board[i]
+    if(q===col || Math.abs(q-col)===Math.abs(i-row))
+    return false
+    }
+    return true
+    }
+
+    async function solve(row){
+    if(row===N){
+    let sol=board.map(x=>x+1)
+    solutions.push(sol)
+    addStep("🎉 Solution Found: "+sol.join(" "), "safeStep")
+    drawBoard()
+    showSolutionBoard(sol)
+    await sleep(3000)
+    return
+    }
+
+    for(let col=0;col<N;col++){
+    await waitIfPaused()
+    drawBoard()
+    addStep(`Trying Row ${row+1}, Column ${col+1}`,"try")
+    await sleep(delay)
+    if(isSafe(row,col)){
+    board[row]=col
+    queensPlaced++
+    document.getElementById("queenCount").innerText=queensPlaced
+    drawBoard()
+    addStep(`Safe position at (${row+1},${col+1})`,"safeStep")
+    await sleep(delay)
+    await solve(row+1)
+    board[row]=-1
+    queensPlaced--
+    backtracks++
+    document.getElementById("queenCount").innerText=queensPlaced
+    document.getElementById("backtrackCount").innerText=backtracks
+    drawBoard()
+    addStep("Backtracking","backtrack")
+    await sleep(delay)
+    } else{
+    addStep("Conflict! Another queen attacks here","wrong")
+    await sleep(delay)
+    }
+    }
+    }
+
+    async function start(){
+    solutions=[]
+    document.getElementById("steps").innerHTML=""
+    document.getElementById("solutions").innerHTML=""
+    steps=0
+    backtracks=0
+    queensPlaced=0
+    document.getElementById("stepCount").innerText=0
+    document.getElementById("backtrackCount").innerText=0
+    document.getElementById("queenCount").innerText=0
+    N=parseInt(document.getElementById("size").value)
+    delay=parseInt(document.getElementById("speed").value)
+    board=new Array(N).fill(-1)
+    drawBoard()
+    addStep("Algorithm Started")
+    await sleep(delay)
+    await solve(0)
+
+    // Show big overlay message
+    document.getElementById("totalSolutions").innerText = "Total Solutions: " + solutions.length
+    document.getElementById("celebrationOverlay").classList.add("show")
+    }
+
+    function pauseAlgo(){
+    paused=true
+    }
+
+    function resumeAlgo(){
+    paused=false
+    }
+
+    function resetBoard(){
+    document.getElementById("steps").innerHTML=""
+    document.getElementById("board").innerHTML=""
+    document.getElementById("solutions").innerHTML=""
+    document.getElementById("celebrationOverlay").classList.remove("show")
+    steps=0
+    backtracks=0
+    queensPlaced=0
+    solutions=[]
+    document.getElementById("stepCount").innerText=0
+    document.getElementById("backtrackCount").innerText=0
+    document.getElementById("queenCount").innerText=0
+    }
+
+</script>
+</body>
+</html>
